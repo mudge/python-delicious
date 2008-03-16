@@ -3,17 +3,14 @@
 
 Python module for access to del.icio.us <http://del.icio.us/> via its API.
 
-Visit http://mudge.name/projects/python-delicious/ for the latest
-version and for usage examples.
-
 Recommended: Python 2.3 or later (untested on previous versions)
 """
 
-__version__ = "pre-1.0-" + "$Revision: 50 $"[11:13] + "-svn"
+__version__ = "pre-1.0"
 #__version__ = "1.0"
 __license__ = "BSD"
-__copyright__ = "Copyright 2005, Paul Mucur"
-__author__ = "Paul Mucur <http://mudge.name/>"
+__copyright__ = "Copyright 2005-2008, Paul Mucur"
+__author__ = "Paul Mucur <http://mucur.name/>"
 
 #TODO:
 #   Should text be properly escaped for XML? Or that not this module's 
@@ -64,7 +61,7 @@ except:
     
 
 # The URL of the del.icio.us API as it will be changing shortly.
-DELICIOUS_API = "http://del.icio.us/api"
+DELICIOUS_API = "https://api.del.icio.us/v1"
 
 def open(username, password):
     """Open a connection to a del.icio.us account"""
@@ -128,7 +125,7 @@ class DeliciousAccount(UserDict):
         if _debug:
             sys.stderr.write("Initialising DeliciousAccount object.\n")
         auth_handler = urllib2.HTTPBasicAuthHandler()
-        auth_handler.add_password("del.icio.us API", "http://del.icio.us/", \
+        auth_handler.add_password("del.icio.us API", "https://api.del.icio.us/", \
                 username, password)
         opener = urllib2.build_opener(auth_handler)
         opener.addheaders = [("User-agent", USER_AGENT)]
