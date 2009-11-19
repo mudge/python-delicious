@@ -1,5 +1,6 @@
 import httplib2
 import datetime
+from urllib.parse import urlencode
 try:
   from lxml import etree
 except ImportError:
@@ -21,6 +22,20 @@ class Account:
       
       # Make a copy of the attributes.
       attributes = dict(etree.fromstring(content).attrib)
-      attributes['time'] = datetime.datetime.strptime(attributes['time'], '%Y-%m-%dT%H:%M:%SZ')
+      self.parse_time(attributes)
       return attributes
       
+  def recent_bookmarks(self, count=None, tag=None):
+    parameters = {}
+    if count:
+      parameters['count'] = count
+    if tag:
+      parameters['tag'] = tag
+    response, content = self.h.request('https://api.del.icio.us/v1/posts/recent?' + urlencode(parameters))
+    if response.status == 200:
+      bookmarks = [self.parse_time(dict(post.attrib)) for post in etree.fromstring(content).findall('post')]
+      return bookmarks
+  
+  def parse_time(self, timed_item):
+    timed_item['time'] = datetime.datetime.strptime(timed_item['time'], '%Y-%m-%dT%H:%M:%SZ')
+    return timed_item
