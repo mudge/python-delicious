@@ -1,13 +1,6 @@
 Python-Delicious
 ================
 
-Python module to access del.icio.us via its API.
+A ground-up rewrite of my Python module to access del.icio.us via its API for Python 3.
 
-Copyright 2005-2008 by Paul Mucur
-BSD License
-
-To install:
-
-    python setup.py install
-
-For usage information and documentation, see index.html.
+Copyright (c) 2009 Paul Mucur
