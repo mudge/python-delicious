@@ -5,12 +5,12 @@ import sys
 class APIMethods(unittest.TestCase):
   api_methods = (
     'last_update',
-    'add_bookmark',
-    'delete_bookmark',
+    'add',
+    'delete',
     'bookmark',
     'dates',
     'bookmarks',
-    'recent_bookmarks',
+    'recent',
     'suggest',
     'all_tags',
     'delete_tag',
