@@ -206,6 +206,65 @@ class Account:
                 return self._bookmarks
         else:
             return self._bookmarks
+    
+    def hashes(self):
+        '''Return a change manifest of all bookmarks.'''
+        response, content = self.h.request('https://api.del.icio.us/v1/posts/all?hashes')
+        if response.status == 200:
+            return [dict(post.attrib) for post in etree.fromstring(content).findall('post')]
+    
+    def suggest(self, url):
+        '''Return a tuple of popular, recommended and network tags for a URL.'''
+        response, content = self.h.request('https://api.del.icio.us/v1/posts/suggest?' + urlencode({'url': url}))
+        if response.status == 200:
+            popular = [tag.text for tag in etree.fromstring(content).findall('popular')]
+            recommended = [tag.text for tag in etree.fromstring(content).findall('recommended')]
+            network = [tag.text for tag in etree.fromstring(content).findall('network')]
+            return (popular, recommended, network)
+    
+    def tags(self):
+        '''Return a list of tags and number of times used by a user.'''
+        response, content = self.h.request('https://api.del.icio.us/v1/tags/get')
+        if response.status == 200:
+            return [tag.attrib for tag in etree.fromstring(content).findall('tag')]
+    
+    def delete_tag(self, tag):
+        '''Delete an existing tag.'''
+        response, content = self.h.request('https://api.del.icio.us/v1/tags/delete?' + urlencode({'tag': tag}))
+        if response.status == 200:
+            return etree.fromstring(content).text
+    
+    def bundles(self, name=None):
+        '''Return all bundles for a user.'''
+        parameters = {}
+        if name:
+            parameters['bundle'] = name
+        response, content = self.h.request('https://api.del.icio.us/v1/tags/bundles/all?' + urlencode(parameters))
+        if response.status == 200:
+            return [bundle.attrib for bundle in etree.fromstring(content).findall('bundle')]
+            
+    def set_bundle(self, name, tags):
+        '''Assign a set of tags to a bundle.'''
+        parameters = {'bundle': name}
+        if isinstance(tags, list):
+            parameters['tags'] = ' '.join(tags)
+        elif isinstance(tags, str):
+            parameters['tags'] = tags
+        response, content = self.h.request('https://api.del.icio.us/v1/tags/bundles/set?' + urlencode(parameters))
+        if response.status == 200:
+            return etree.fromstring(content).text
+    
+    def delete_bundle(self, name):
+        '''Delete a bundle.'''
+        parameters = {'bundle': name}
+        if response.status == 200:
+            return etree.fromstring(content).text
+            
+    def rename_tag(self, old, new):
+        '''Rename an existing tag.'''
+        response, content = self.h.request('https://api.del.icio.us/v1/tags/rename?' + urlencode({'old': old, 'new': new}))
+        if response.status == 200:
+            return etree.fromstring(content).text
         
     def __convert_time_string(self, dict_with_time, time_key='time'):
         '''Convert an ISO8601 time string to a datetime in a dictionary.
@@ -233,3 +292,8 @@ class Account:
         year, month, day = [int(x) for x in dict_with_date[date_key].split('-')]
         dict_with_date[date_key] = datetime.date(year, month, day)
         return dict_with_date
+        
+    def __convert_tag_string(self, dict_with_tags, tag_key='tags'):
+        '''Convert a space-separated tag string to a list of tags.'''
+        dict_with_tags['tags'] = dict_with_tags['tags'].split(' ')
+        return dict_with_tags
