@@ -1,11 +1,13 @@
 import httplib2
 import datetime
 from urllib.parse import urlencode
+from functools import wraps
+
 try:
     from lxml import etree
 except ImportError:
     import xml.etree.ElementTree as etree
-
+    
 class Account:
     
     '''A user account for Delicious.'''
@@ -29,19 +31,21 @@ class Account:
         self.password = password
         self.h = httplib2.Http(http_cache)
         self.h.add_credentials(username, password, 'api.del.icio.us')
-
-    def __throttle(self, method, *args):
-        if self._last_request:
-            while (datetime.datetime.now() - self._last_request).seconds < 1:
-                pass
-        result = method(*args)
-        self._last_request = datetime.datetime.now()
-        return result
     
-    def last_update(self):
-        return self.__throttle(self.__last_update)
+    def throttled(func):
+        '''Decorate a function to prevent more than one request to Delicious per second.'''
+        @wraps(func)
+        def new_func(self, *args, **kwargs):
+            if self._last_request:
+                while (datetime.datetime.now() - self._last_request).seconds < 1:
+                    pass
+            value = func(self, *args, **kwargs)
+            self._last_request = datetime.datetime.now()
+            return value
+        return new_func
         
-    def __last_update(self):
+    @throttled
+    def last_update(self):
         '''Return a dictionary containing the last update time for the user and the number of new items in the user's inbox since it was last visited.
 
         Returns: dict
@@ -52,10 +56,8 @@ class Account:
             attributes = self.__convert_time_string(dict(etree.fromstring(content).attrib))
             return attributes
     
+    @throttled
     def recent(self, count=None, tag=None):
-        return self.__throttle(self.__recent, count, tag)
-        
-    def __recent(self, count=None, tag=None):
         '''Return a list of the most recent bookmarks.
 
         Keyword arguments:
@@ -75,10 +77,8 @@ class Account:
             bookmarks = [self.__convert_time_string(dict(post.attrib)) for post in etree.fromstring(content).findall('post')]
             return bookmarks
 
+    @throttled
     def delete(self, url):
-        return self.__throttle(self.__delete, url)
-        
-    def __delete(self, url):
         '''Delete a specific bookmark by URL.
 
         Keyword arguments:
@@ -91,10 +91,8 @@ class Account:
         if response.status == 200:
             return etree.fromstring(content).attrib['code']
     
+    @throttled
     def bookmark(self, tags=None, date=None, url=None, hashes=None, meta=None):
-        return self.__throttle(self.__bookmark, tags, date, url, hashes, meta)
-        
-    def __bookmark(self, tags=None, date=None, url=None, hashes=None, meta=None):
         '''Return one or more bookmarks on a single day matching the given parameters.
         
         Keyword arguments:
@@ -131,11 +129,9 @@ class Account:
         if response.status == 200:
             bookmarks = [self.__convert_time_string(dict(post.attrib)) for post in etree.fromstring(content).findall('post')]
             return bookmarks
-    
+
+    @throttled
     def add(self, url, description, extended=None, tags=None, date=None, replace=None, private=None):
-        return self.__throttle(self.__add, url, description, extended, tags, date, replace, private)
-        
-    def __add(self, url, description, extended=None, tags=None, date=None, replace=None, private=None):
         '''Add a bookmark.
         
         Keyword arguments:
@@ -172,10 +168,8 @@ class Account:
         if response.status == 200:
             return etree.fromstring(content).attrib['code']
     
+    @throttled
     def dates(self, tag=None):
-        return self.__throttle(self.__dates, tag)
-        
-    def __dates(self, tag=None):
         '''Return a list of dates with the number of posts on each date.
         
         Keyword arguments:
@@ -191,10 +185,8 @@ class Account:
         if response.status == 200:
             return [self.__convert_date_string(dict(date.attrib)) for date in etree.fromstring(content).findall('date')]
     
+    @throttled
     def bookmarks(self, tag=None, offset=None, limit=None, from_date=None, to_date=None, meta=None):
-        return self.__throttle(self.__bookmarks, tag, offset, limit, from_date, to_date, meta)
-        
-    def __bookmarks(self, tag=None, offset=None, limit=None, from_date=None, to_date=None, meta=None):
         '''Returns all bookmarks.
         
         Keyword arguments:
@@ -237,19 +229,15 @@ class Account:
         else:
             return self._bookmarks
     
+    @throttled
     def hashes(self):
-        return self.__throttle(self.__hashes)
-        
-    def __hashes(self):
         '''Return a change manifest of all bookmarks.'''
         response, content = self.h.request('https://api.del.icio.us/v1/posts/all?hashes')
         if response.status == 200:
             return [dict(post.attrib) for post in etree.fromstring(content).findall('post')]
     
+    @throttled
     def suggest(self, url):
-        return self.__throttle(self.__suggest, url)
-        
-    def __suggest(self, url):
         '''Return a tuple of popular, recommended and network tags for a URL.'''
         response, content = self.h.request('https://api.del.icio.us/v1/posts/suggest?' + urlencode({'url': url}))
         if response.status == 200:
@@ -258,28 +246,22 @@ class Account:
             network = [tag.text for tag in etree.fromstring(content).findall('network')]
             return (popular, recommended, network)
     
+    @throttled
     def tags(self):
-        return self.__throttle(self.__tags)
-        
-    def __tags(self):
         '''Return a list of tags and number of times used by a user.'''
         response, content = self.h.request('https://api.del.icio.us/v1/tags/get')
         if response.status == 200:
             return [tag.attrib for tag in etree.fromstring(content).findall('tag')]
     
+    @throttled
     def delete_tag(self, tag):
-        return self.__throttle(tag)
-        
-    def __delete_tag(self, tag):
         '''Delete an existing tag.'''
         response, content = self.h.request('https://api.del.icio.us/v1/tags/delete?' + urlencode({'tag': tag}))
         if response.status == 200:
             return etree.fromstring(content).text
     
+    @throttled
     def bundles(self, name=None):
-        return self.__throttle(self.__bundles, name)
-        
-    def __bundles(self, name=None):
         '''Return all bundles for a user.'''
         parameters = {}
         if name:
@@ -288,10 +270,8 @@ class Account:
         if response.status == 200:
             return [bundle.attrib for bundle in etree.fromstring(content).findall('bundle')]
     
+    @throttled
     def set_bundle(self, name, tags):
-        return self.__throttle(self.__set_bundle, name, tags)
-        
-    def __set_bundle(self, name, tags):
         '''Assign a set of tags to a bundle.'''
         parameters = {'bundle': name}
         if isinstance(tags, list):
@@ -302,19 +282,15 @@ class Account:
         if response.status == 200:
             return etree.fromstring(content).text
     
+    @throttled
     def delete_bundle(self, name):
-        return self.__throttle(self.__delete_bundle, name)
-        
-    def __delete_bundle(self, name):
         '''Delete a bundle.'''
         parameters = {'bundle': name}
         if response.status == 200:
             return etree.fromstring(content).text
     
+    @throttled
     def rename_tag(self, old, new):
-        return self.__throttle(self.__rename_tag, old, new)
-        
-    def __rename_tag(self, old, new):
         '''Rename an existing tag.'''
         response, content = self.h.request('https://api.del.icio.us/v1/tags/rename?' + urlencode({'old': old, 'new': new}))
         if response.status == 200:
