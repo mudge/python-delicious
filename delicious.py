@@ -325,5 +325,5 @@ class Account:
         
     def __convert_tag_string(self, dict_with_tags, tag_key='tags'):
         '''Convert a space-separated tag string to a list of tags.'''
-        dict_with_tags['tags'] = dict_with_tags['tags'].split(' ')
+        dict_with_tags[tag_key] = dict_with_tags[tag_key].split(' ')
         return dict_with_tags
