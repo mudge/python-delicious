@@ -24,7 +24,7 @@ _debug = 0
 
 # The user agent string sent to del.icio.us when making requests. If you are
 # using this module in your own application, you should probably change this.
-USER_AGENT = "Python-Delicious/%s +http://mudge.name/projects/python-delicious/" % __version__
+USER_AGENT = "Python-Delicious/%s +http://morgancraft.com/service_layer/python-delicious/" % __version__
 
 import urllib
 import urllib2
@@ -106,6 +106,10 @@ class RenameTagError(DeliciousError):
     """Error renaming a tag in del.icio.us"""
     pass
 
+class DateParamsError(DeliciousError):
+    '''Date params error'''
+    pass
+    
 class DeliciousAccount(UserDict):
     """A del.icio.us account"""
     
@@ -157,9 +161,9 @@ class DeliciousAccount(UserDict):
                 sys.stderr.write("The value of posts has been changed.\n")
             self.__postschanged = 1
         return UserDict.__setitem__(self, key, value)
-
-    # Private methods
-    
+        
+        
+        
     def __request(self, url):
         
         # Make sure that it has been at least 1 second since the last
@@ -194,7 +198,7 @@ class DeliciousAccount(UserDict):
         return self.__request("%s/posts/update" % \
                 DELICIOUS_API).firstChild.getAttribute("time")
     
-    def posts(self, tag="", date="", count=0):
+    def posts(self, tag="", date="", todt="", fromdt="", count=0):
         """Return del.icio.us bookmarks as a list of dictionaries.
         
         This should be used without arguments as rarely as possible by 
@@ -204,7 +208,13 @@ class DeliciousAccount(UserDict):
         
         """
         query = {}
-        if not count and not date and not tag:
+        
+        ## if a date is passed then a ranged set of date params CANNOT be passed
+        if date and (todt or fromdt):
+            raise DateParamsError
+            
+            
+        if not count and not date and not todt and not fromdt and not tag:
             path = "all"
             
             # If attempting to load all of the posts from del.icio.us, and
@@ -224,12 +234,34 @@ class DeliciousAccount(UserDict):
                 self.__allposts = 1
         elif date:
             path = "get"
+        elif todt or fromdt:
+            path = "all"
         else:
             path = "recent"
         if count:
             query["count"] = count
         if tag:
             query["tag"] = tag
+            
+        ##todt
+        if todt and (isinstance(todt, ListType) or isinstance(todt, TupleType)):
+            query["todt"] = "-".join([str(x) for x in todt[:3]])
+        elif todt and (todt and isinstance(todt, datetime.datetime) or \
+                isinstance(todt, datetime.date)):
+            query["todt"] = "-".join([str(todt.year), str(todt.month), str(todt.day)])
+        elif todt:
+            query["todt"] = todt
+        
+        ## fromdt
+        if fromdt and (isinstance(fromdt, ListType) or isinstance(fromdt, TupleType)):
+            query["fromdt"] = "-".join([str(x) for x in fromdt[:3]])
+        elif fromdt and (fromdt and isinstance(fromdt, datetime.datetime) or \
+                isinstance(fromdt, datetime.date)):
+            query["fromdt"] = "-".join([str(fromdt.year), str(fromdt.month), str(fromdt.day)])
+        elif fromdt:
+            query["fromdt"] = fromdt
+            
+        
         if date and (isinstance(date, ListType) or isinstance(date, TupleType)):
             query["dt"] = "-".join([str(x) for x in date[:3]])
         elif date and (datetime and isinstance(date, datetime.datetime) or \
@@ -237,6 +269,7 @@ class DeliciousAccount(UserDict):
             query["dt"] = "-".join([str(date.year), str(date.month), str(date.day)])
         elif date:
             query["dt"] = date
+        
         postsxml = self.__request("%s/posts/%s?%s" % (DELICIOUS_API, path, \
                 urllib.urlencode(query))).getElementsByTagName("post")
         posts = []
