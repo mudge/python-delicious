@@ -11,3 +11,8 @@ To install:
     python setup.py install
 
 For usage information and documentation, see index.html.
+
+Contributors
+------------
+
+* [Morgan Craft](https://github.com/mgan59)

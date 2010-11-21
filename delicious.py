@@ -13,7 +13,7 @@ __copyright__ = "Copyright 2005-2008, Paul Mucur"
 __author__ = "Paul Mucur <http://mucur.name/>"
 
 #TODO:
-#   Should text be properly escaped for XML? Or that not this module's 
+#   Should text be properly escaped for XML? Or that not this module's
 #       responsibility?
 #   Create test suite
 #   Gzip support - but the API does not yet support it
@@ -24,7 +24,7 @@ _debug = 0
 
 # The user agent string sent to del.icio.us when making requests. If you are
 # using this module in your own application, you should probably change this.
-USER_AGENT = "Python-Delicious/%s +http://morgancraft.com/service_layer/python-delicious/" % __version__
+USER_AGENT = "Python-Delicious/%s +http://github.com/mudge/python-delicious" % __version__
 
 import urllib
 import urllib2
@@ -47,7 +47,7 @@ try:
     TupleType = tuple
 except:
     from types import ListType, TupleType
-    
+
 # Taken from Mark Pilgrim's amazing Universal Feed Parser
 # <http://feedparser.org/>
 try:
@@ -58,7 +58,7 @@ try:
     import datetime
 except:
     datetime = None
-    
+
 
 # The URL of the del.icio.us API as it will be changing shortly.
 DELICIOUS_API = "https://api.del.icio.us/v1"
@@ -77,7 +77,7 @@ def connect(username, password):
 class DeliciousError(Exception):
     """Error in the Python-Delicious module"""
     pass
-    
+
 class ThrottleError(DeliciousError):
     """Error caused by del.icio.us throttling requests"""
     def __init__(self, url, message):
@@ -97,7 +97,7 @@ class DeleteError(DeliciousError):
 class BundleError(DeliciousError):
     """Error bundling tags on del.icio.us"""
     pass
-    
+
 class DeleteBundleError(DeliciousError):
     """Error deleting a bundle from del.icio.us"""
     pass
@@ -109,22 +109,22 @@ class RenameTagError(DeliciousError):
 class DateParamsError(DeliciousError):
     '''Date params error'''
     pass
-    
+
 class DeliciousAccount(UserDict):
     """A del.icio.us account"""
-    
+
     # Used to track whether all posts have been downloaded yet.
     __allposts = 0
     __postschanged = 0
-    
+
     # Time of last request so that the one second limit can be enforced.
     __lastrequest = None
-    
+
     # Special methods
-    
+
     def __init__(self, username, password):
         UserDict.__init__(self)
-        
+
         # Authenticate the URL opener so that it can access del.icio.us
         if _debug:
             sys.stderr.write("Initialising DeliciousAccount object.\n")
@@ -141,7 +141,7 @@ class DeliciousAccount(UserDict):
                 "%Y-%m-%dT%H:%M:%SZ")
         if _debug:
             sys.stderr.write("Time of last update loaded into class dictionary.\n")
-    
+
     def __getitem__(self, key):
         try:
             return UserDict.__getitem__(self, key)
@@ -154,18 +154,17 @@ class DeliciousAccount(UserDict):
                 return self.posts()
             elif key == "bundles":
                 return self.bundles()
-    
+
     def __setitem__(self, key, value):
         if key == "posts":
             if _debug:
                 sys.stderr.write("The value of posts has been changed.\n")
             self.__postschanged = 1
         return UserDict.__setitem__(self, key, value)
-        
-        
-        
+
+
     def __request(self, url):
-        
+
         # Make sure that it has been at least 1 second since the last
         # request was made. If not, halt execution for approximately one
         # seconds.
@@ -189,37 +188,36 @@ class DeliciousAccount(UserDict):
         if _debug:
             sys.stderr.write("%s opened successfully.\n" % url)
         return minidom.parseString(xml.read())
-    
-    
+
+
     # Methods to fetch del.icio.us content
-    
+
     def lastupdate(self):
         """Return the last time that the del.icio.us account was updated."""
         return self.__request("%s/posts/update" % \
                 DELICIOUS_API).firstChild.getAttribute("time")
-    
+
     def posts(self, tag="", date="", todt="", fromdt="", count=0):
         """Return del.icio.us bookmarks as a list of dictionaries.
-        
-        This should be used without arguments as rarely as possible by 
-        combining it with the lastupdate attribute to only get all posts when 
-        there is new content as it places a large load on the del.icio.us 
+
+        This should be used without arguments as rarely as possible by
+        combining it with the lastupdate attribute to only get all posts when
+        there is new content as it places a large load on the del.icio.us
         servers.
-        
+
         """
         query = {}
-        
+
         ## if a date is passed then a ranged set of date params CANNOT be passed
         if date and (todt or fromdt):
             raise DateParamsError
-            
-            
+
         if not count and not date and not todt and not fromdt and not tag:
             path = "all"
-            
+
             # If attempting to load all of the posts from del.icio.us, and
-            # a previous download has been done, check to see if there has 
-            # been an update; if not, then just return the posts stored 
+            # a previous download has been done, check to see if there has
+            # been an update; if not, then just return the posts stored
             # inside the class.
             if _debug:
                 sys.stderr.write("Checking to see if a previous download has been made.\n")
@@ -242,7 +240,7 @@ class DeliciousAccount(UserDict):
             query["count"] = count
         if tag:
             query["tag"] = tag
-            
+
         ##todt
         if todt and (isinstance(todt, ListType) or isinstance(todt, TupleType)):
             query["todt"] = "-".join([str(x) for x in todt[:3]])
@@ -251,7 +249,7 @@ class DeliciousAccount(UserDict):
             query["todt"] = "-".join([str(todt.year), str(todt.month), str(todt.day)])
         elif todt:
             query["todt"] = todt
-        
+
         ## fromdt
         if fromdt and (isinstance(fromdt, ListType) or isinstance(fromdt, TupleType)):
             query["fromdt"] = "-".join([str(x) for x in fromdt[:3]])
@@ -260,8 +258,7 @@ class DeliciousAccount(UserDict):
             query["fromdt"] = "-".join([str(fromdt.year), str(fromdt.month), str(fromdt.day)])
         elif fromdt:
             query["fromdt"] = fromdt
-            
-        
+
         if date and (isinstance(date, ListType) or isinstance(date, TupleType)):
             query["dt"] = "-".join([str(x) for x in date[:3]])
         elif date and (datetime and isinstance(date, datetime.datetime) or \
@@ -269,13 +266,13 @@ class DeliciousAccount(UserDict):
             query["dt"] = "-".join([str(date.year), str(date.month), str(date.day)])
         elif date:
             query["dt"] = date
-        
+
         postsxml = self.__request("%s/posts/%s?%s" % (DELICIOUS_API, path, \
                 urllib.urlencode(query))).getElementsByTagName("post")
         posts = []
         if _debug:
             sys.stderr.write("Parsing posts XML into a list of dictionaries.\n")
-            
+
         # For each post, extract every attribute (splitting tags into sub-lists)
         # and insert as a dictionary into the `posts` list.
         for post in postsxml:
@@ -299,7 +296,7 @@ class DeliciousAccount(UserDict):
             sys.stderr.write("Resetting marker so module doesn't think posts has been changed.\n")
         self.__postschanged = 0
         return posts
-        
+
     def tags(self):
         """Return a dictionary of tags with the number of posts in each one"""
         tagsxml = self.__request("%s/tags/get?" % \
@@ -324,7 +321,7 @@ class DeliciousAccount(UserDict):
         if not self.has_key("tags"):
             self["tags"] = tags
         return tags
-    
+
     def bundles(self):
         """Return a dictionary of all bundles"""
         bundlesxml = self.__request("%s/tags/bundles/all" % \
@@ -345,7 +342,7 @@ class DeliciousAccount(UserDict):
         if not self.has_key("bundles"):
             self["bundles"] = bundles
         return bundles
-        
+
     def dates(self, tag=""):
         """Return a dictionary of dates with the number of posts at each date"""
         if tag:
@@ -374,10 +371,10 @@ class DeliciousAccount(UserDict):
         if not self.has_key("dates"):
             self["dates"] = dates
         return dates
-    
-    
+
+
     # Methods to modify del.icio.us content
-    
+
     def add(self, url, description, extended="", tags=(), date=""):
         """Add a new post to del.icio.us"""
         query = {}
@@ -391,7 +388,7 @@ class DeliciousAccount(UserDict):
                 (not StringTypes and (isinstance(tags, StringType) or \
                 isinstance(tags, UnicodeType))):
             query["tags"] = tags
-            
+
         # This is a rather rudimentary way of parsing date strings into
         # ISO8601 dates: if the date string is shorter than the required
         # 20 characters then it is assumed that it is a partial date
@@ -430,7 +427,7 @@ class DeliciousAccount(UserDict):
             if _debug:
                 sys.stderr.write("Unable to add post, %s (%s), to del.icio.us\n" \
                         % (description, url))
-    
+
     def bundle(self, bundle, tags):
         """Bundle a set of tags together"""
         query = {}
@@ -451,7 +448,7 @@ class DeliciousAccount(UserDict):
             if _debug:
                 sys.stderr.write("Unable to bundle tags, %s, into %s to del.icio.us\n" \
                         % (repr(tags), bundle))
-    
+
     def delete(self, url):
         """Delete post from del.icio.us by its URL"""
         try:
@@ -463,10 +460,10 @@ class DeliciousAccount(UserDict):
                 sys.stderr.write("Post, %s, deleted from del.icio.us\n" \
                         % url)
         except:
-            if _debug: 
+            if _debug:
                 sys.stderr.write("Unable to delete post, %s, from del.icio.us\n" \
                     % url)
-    
+
     def delete_bundle(self, name):
         """Delete bundle from del.icio.us by its name"""
         try:
@@ -478,10 +475,10 @@ class DeliciousAccount(UserDict):
                 sys.stderr.write("Bundle, %s, deleted from del.icio.us\n" \
                         % name)
         except:
-            if _debug: 
+            if _debug:
                 sys.stderr.write("Unable to delete bundle, %s, from del.icio.us\n" \
                     % name)
-    
+
     def rename_tag(self, old, new):
         """Rename a tag"""
         query = {"old":old, "new":new}
@@ -507,16 +504,16 @@ if __name__ == "__main__":
 #0.2 - 30/3/2005 - PEM - Now using urllib's urlencode to handle query building
 #   and the class now extends dict (or failing that: UserDict).
 #0.3 - 30/3/2005 - PEM - Rewrote doc strings and improved the metaphor that the
-#   account is a dictionary by adding posts, tags and dates to the account 
-#   object when they are called. This has the added benefit of reducing 
-#   requests to del.icio.us as one need only call posts(), dates() and tags() 
+#   account is a dictionary by adding posts, tags and dates to the account
+#   object when they are called. This has the added benefit of reducing
+#   requests to del.icio.us as one need only call posts(), dates() and tags()
 #   once and they are stored inside the class instance until deletion.
 #0.4 - 30/3/2005 - PEM - Added private __request method to handle URL requests
 #   to del.icio.us and implemented throttle detection.
 #0.5 - 30/3/2005 - PEM - Now implements every part of the API specification
 #0.6 - 30/3/2005 - PEM - Heavily vetted code to conform with PEP 8: use of
-#   isinstance(), use of `if var` and `if not var` instead of comparison to 
-#   empty strings and changed all string delimiters to double primes for 
+#   isinstance(), use of `if var` and `if not var` instead of comparison to
+#   empty strings and changed all string delimiters to double primes for
 #   consistency.
 #0.7 - 31/3/2005 - PEM - Made it so that when a fetching operation such as
 #   posts() or tags() is used, only new posts are added to the class dictionary
@@ -537,7 +534,7 @@ if __name__ == "__main__":
 #0.9 - 2/4/2005 - PEM - Now uses datetime objects when possible.
 #0.10 - 4/4/2005 - PEM - Uses the time module when the datetime module is
 #   unavailable (such as versions of Python prior to 2.3). Now uses time
-#   tuples instead of datetime objects when outputting for compatibility and 
+#   tuples instead of datetime objects when outputting for compatibility and
 #   consistency. Time tuples are a new attribute: "date_parsed", with the
 #   original string format of the date (or datetime) in "date" etc. Now stores
 #   the headers of each request.
